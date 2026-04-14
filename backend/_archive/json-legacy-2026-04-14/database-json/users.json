@@ -1,0 +1,29 @@
+[
+  {
+    "id": "90c9d284-b31e-4d44-ad74-142e9676fa9b",
+    "createdAt": "2026-03-12T13:46:55.186Z",
+    "updatedAt": "2026-03-12T13:46:55.187Z",
+    "isVerified": true,
+    "email": "admin@alumnyx.com",
+    "password": "$2b$10$jnMkPMwrCXKYiZsZOhV7de7DjZU9CREnkWFXvhSQLgX2ysj3UfPgq",
+    "role": "ADMIN"
+  },
+  {
+    "id": "c4270c54-8204-4419-8a24-c69edad2d0ee",
+    "createdAt": "2026-03-12T13:46:55.189Z",
+    "updatedAt": "2026-03-12T13:46:55.189Z",
+    "isVerified": true,
+    "email": "alumni1@university.edu",
+    "password": "$2b$10$jnMkPMwrCXKYiZsZOhV7de7DjZU9CREnkWFXvhSQLgX2ysj3UfPgq",
+    "role": "ALUMNI"
+  },
+  {
+    "id": "50ceb95b-c305-44f5-8860-6b47f45151a3",
+    "createdAt": "2026-03-12T13:46:55.190Z",
+    "updatedAt": "2026-03-12T13:46:55.190Z",
+    "isVerified": false,
+    "email": "student1@university.edu",
+    "password": "$2b$10$jnMkPMwrCXKYiZsZOhV7de7DjZU9CREnkWFXvhSQLgX2ysj3UfPgq",
+    "role": "STUDENT"
+  }
+]

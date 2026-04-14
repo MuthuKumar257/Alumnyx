@@ -1,0 +1,14 @@
+[
+  {
+    "id": "d5eaa407-ab3b-4239-adbf-8c18fed35efd",
+    "createdAt": "2026-03-12T13:46:55.192Z",
+    "updatedAt": "2026-03-12T13:46:55.192Z",
+    "title": "Software Engineering Intern",
+    "company": "Tech Corp",
+    "location": "Remote",
+    "description": "Looking for a passionate intern to join our core team.",
+    "requirements": "React, Node.js, Basic SQL",
+    "salary": "$2000/month",
+    "posterId": "c4270c54-8204-4419-8a24-c69edad2d0ee"
+  }
+]

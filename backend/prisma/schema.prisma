@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ALUMNI
+  ADMIN
+}
+
+enum MentorshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  ACCEPTED
+  REJECTED
+}
+
+enum AlumniStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  VERIFIED
+}
+
+model User {
+  id               String              @id @default(uuid())
+  email            String              @unique
+  password         String
+  role             Role                @default(STUDENT)
+  isVerified       Boolean             @default(false)
+  isSuperAdmin     Boolean             @default(false)
+  alumniStatus     AlumniStatus?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  profile          Profile?
+  jobs             Job[]               @relation("JobPoster")
+  sentRequests     MentorshipRequest[] @relation("MentorshipStudent")
+  receivedRequests MentorshipRequest[] @relation("MentorshipMentor")
+  messagesSent     Message[]           @relation("MessageSender")
+  messagesReceived Message[]           @relation("MessageReceiver")
+  posts            Post[]
+  postLikes        PostLike[]
+  jobApplications  JobApplication[]
+  adminLogs        AdminLog[]          @relation("AdminAction")
+}
+
+model Profile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName      String
+  lastName       String
+  college        String?
+  department     String?
+  graduationYear Int?
+  skills         String[]
+  currentCompany String?
+  bio            String?
+  profilePicture String?
+  resumeUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Job {
+  id           String           @id @default(uuid())
+  title        String
+  company      String
+  location     String?
+  description  String
+  requirements String?
+  salary       String?
+  posterId     String
+  poster       User             @relation("JobPoster", fields: [posterId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model JobApplication {
+  id          String            @id @default(uuid())
+  jobId       String
+  applicantId String
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicant   User              @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  status      ApplicationStatus @default(PENDING)
+  coverNote   String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([jobId, applicantId])
+}
+
+model MentorshipRequest {
+  id        String           @id @default(uuid())
+  studentId String
+  mentorId  String
+  student   User             @relation("MentorshipStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  mentor    User             @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  status    MentorshipStatus @default(PENDING)
+  message   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([studentId, mentorId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  content    String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Post {
+  id        String     @id @default(uuid())
+  authorId  String
+  author    User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  mediaUrl  String?
+  likes     PostLike[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model AdminLog {
+  id        String   @id @default(uuid())
+  adminId   String
+  admin     User     @relation("AdminAction", fields: [adminId], references: [id], onDelete: Cascade)
+  action    String
+  targetId  String?
+  metadata  String?
+  createdAt DateTime @default(now())
+}
+
+model AppSetting {
+  key       String   @id
+  valueJson Json
+  updatedAt DateTime @updatedAt
+}

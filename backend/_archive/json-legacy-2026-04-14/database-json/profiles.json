@@ -1,0 +1,38 @@
+[
+  {
+    "id": "97ed7579-aeaf-48e1-8f66-83c7e2535f59",
+    "userId": "90c9d284-b31e-4d44-ad74-142e9676fa9b",
+    "firstName": "Super",
+    "lastName": "Admin",
+    "skills": []
+  },
+  {
+    "id": "3795d591-54e3-4c03-9f28-8bd54d25be82",
+    "userId": "c4270c54-8204-4419-8a24-c69edad2d0ee",
+    "firstName": "John",
+    "lastName": "Doe",
+    "college": "College of Engineering",
+    "graduationYear": 2020,
+    "skills": [
+      "React",
+      "Node.js",
+      "AWS"
+    ],
+    "currentCompany": "Tech Corp",
+    "bio": "Senior Software Engineer passionate about mentoring."
+  },
+  {
+    "id": "751a2868-64a1-4090-b57b-de46e2a5c5db",
+    "userId": "50ceb95b-c305-44f5-8860-6b47f45151a3",
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "college": "College of Engineering",
+    "graduationYear": 2026,
+    "skills": [
+      "Python",
+      "Java",
+      "React"
+    ],
+    "bio": "CS student looking for internships."
+  }
+]
