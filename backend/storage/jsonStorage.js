@@ -460,16 +460,38 @@ const readUsers = async () => {
     } catch (error) {
         // Fallback for deployments where DB schema is older than Prisma model.
         console.error('readUsers primary query failed; using legacy fallback:', error?.message || error);
-        const users = await prisma.$queryRawUnsafe(
-            'SELECT id, email, password, role, "isVerified", "createdAt", "updatedAt" FROM "User"'
-        );
-        return (Array.isArray(users) ? users : []).map((u) =>
-            mapUser({
-                ...u,
-                isSuperAdmin: false,
-                alumniStatus: null,
-            })
-        );
+
+        try {
+            const users = await prisma.$queryRawUnsafe(
+                'SELECT id, email, password, role, "isVerified", "createdAt", "updatedAt" FROM "User"'
+            );
+            return (Array.isArray(users) ? users : []).map((u) =>
+                mapUser({
+                    ...u,
+                    isSuperAdmin: false,
+                    alumniStatus: null,
+                })
+            );
+        } catch (legacyError) {
+            console.error('readUsers legacy "User" fallback failed:', legacyError?.message || legacyError);
+        }
+
+        try {
+            const users = await prisma.$queryRawUnsafe(
+                'SELECT id, email, password, role, is_verified AS "isVerified", created_at AS "createdAt", updated_at AS "updatedAt" FROM users'
+            );
+            return (Array.isArray(users) ? users : []).map((u) =>
+                mapUser({
+                    ...u,
+                    isSuperAdmin: false,
+                    alumniStatus: null,
+                })
+            );
+        } catch (legacySnakeError) {
+            console.error('readUsers legacy users fallback failed:', legacySnakeError?.message || legacySnakeError);
+        }
+
+        return [];
     }
 };
 
