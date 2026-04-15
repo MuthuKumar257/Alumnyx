@@ -454,23 +454,38 @@ const normalizeUsers = (users) => {
 
 // Read all users merged from the three role-specific files
 const readUsers = async () => {
-    const users = await prisma.user.findMany();
-    return users.map(mapUser);
+    try {
+        const users = await prisma.user.findMany();
+        return users.map(mapUser);
+    } catch (error) {
+        // Fallback for deployments where DB schema is older than Prisma model.
+        console.error('readUsers primary query failed; using legacy fallback:', error?.message || error);
+        const users = await prisma.$queryRawUnsafe(
+            'SELECT id, email, password, role, "isVerified", "createdAt", "updatedAt" FROM "User"'
+        );
+        return (Array.isArray(users) ? users : []).map((u) =>
+            mapUser({
+                ...u,
+                isSuperAdmin: false,
+                alumniStatus: null,
+            })
+        );
+    }
 };
 
 const readStudents = async () => {
-    const users = await prisma.user.findMany({ where: { role: 'STUDENT' } });
-    return users.map(mapUser);
+    const users = await readUsers();
+    return users.filter((u) => String(u.role).toUpperCase() === 'STUDENT');
 };
 
 const readAdmins = async () => {
-    const users = await prisma.user.findMany({ where: { role: 'ADMIN' } });
-    return users.map(mapUser);
+    const users = await readUsers();
+    return users.filter((u) => String(u.role).toUpperCase() === 'ADMIN');
 };
 
 const readAlumni = async () => {
-    const users = await prisma.user.findMany({ where: { role: 'ALUMNI' } });
-    return users.map(mapUser);
+    const users = await readUsers();
+    return users.filter((u) => String(u.role).toUpperCase() === 'ALUMNI');
 };
 
 // Write users split into the three role-specific files
