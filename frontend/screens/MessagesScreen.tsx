@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, ActivityIndicator, ScrollView, Alert, Share } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, SafeAreaView, ActivityIndicator, ScrollView, Alert, Share } from 'react-native';
 import { io, Socket } from 'socket.io-client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Search, MoreVertical, PenSquare, Share2, Edit3, ChevronRight } from 'lucide-react-native';
@@ -7,11 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
 import { alumnyxTheme } from '../theme/alumnyxTheme';
 
-const socketUrl = Platform.OS === 'web'
-    ? 'http://localhost:5000'
-    : Platform.OS === 'android'
-        ? 'http://10.0.2.2:5000'
-        : 'http://localhost:5000';
+const socketUrl = 'https://alumnyx.onrender.com';
 
 export default function MessagesScreen() {
     const navigation = useNavigation<any>();

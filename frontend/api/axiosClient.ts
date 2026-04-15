@@ -1,33 +1,21 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+const PRODUCTION_API_URL = 'https://alumnyx.onrender.com';
+
 const resolveApiUrl = () => {
-    if (Platform.OS === 'web') {
-        return 'http://localhost:5000/api';
+    // Keep an escape hatch for local testing via Expo extra if needed.
+    const configuredBaseUrl =
+        Constants.expoConfig?.extra?.apiBaseUrl ||
+        (Constants as any).manifest2?.extra?.apiBaseUrl ||
+        (Constants as any).manifest?.extra?.apiBaseUrl;
+
+    if (typeof configuredBaseUrl === 'string' && configuredBaseUrl.trim()) {
+        return configuredBaseUrl;
     }
 
-    // In Expo Go/dev builds on a physical device, localhost points to the phone.
-    // Use the Metro host IP so native clients can reach the backend on the same LAN.
-    const hostUri =
-        Constants.expoConfig?.hostUri ||
-        (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
-        (Constants as any).manifest?.debuggerHost ||
-        '';
-
-    const host = typeof hostUri === 'string' ? hostUri.split(':')[0] : '';
-    if (host) {
-        return `http://${host}:5000/api`;
-    }
-
-    // Android emulator fallback when host cannot be inferred.
-    if (Platform.OS === 'android') {
-        return 'http://10.0.2.2:5000/api';
-    }
-
-    // iOS simulator fallback.
-    return 'http://localhost:5000/api';
+    return PRODUCTION_API_URL;
 };
 
 const apiUrl = resolveApiUrl();
