@@ -138,10 +138,10 @@ const loginUser = async (req, res) => {
         }
 
         const users = await readUsers();
-        const profiles = await readJson('profiles');
         const user = users.find((u) => u.email.toLowerCase() === String(email).toLowerCase());
 
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        const hasPasswordHash = typeof user?.password === 'string' && user.password.length > 0;
+        if (!user || !hasPasswordHash || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
@@ -151,6 +151,14 @@ const loginUser = async (req, res) => {
                 return res.status(403).json({ message: 'Your alumni application has been rejected. Please contact the administrator.' });
             }
             return res.status(403).json({ message: 'Your account is pending admin approval. You will be notified once approved.' });
+        }
+
+        // Profile data is optional for login response; do not fail auth if profile read fails.
+        let profiles = [];
+        try {
+            profiles = await readJson('profiles');
+        } catch (profileError) {
+            console.warn('Login profile enrichment skipped:', profileError?.message || profileError);
         }
 
         const safe = sanitizeUser(withProfile(user, profiles));
