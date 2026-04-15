@@ -13,6 +13,15 @@ const normalizeRole = (role) => {
     return 'STUDENT';
 };
 
+const safeComparePassword = async (plainPassword, storedHash) => {
+    try {
+        if (typeof storedHash !== 'string' || storedHash.length === 0) return false;
+        return await bcrypt.compare(plainPassword, storedHash);
+    } catch {
+        return false;
+    }
+};
+
 const alumniRegister = async (req, res) => {
     try {
         const { email, password, firstName, lastName, college, graduationYear, department } = req.body;
@@ -132,16 +141,17 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body || {};
         if (!email || !password) {
             return res.status(400).json({ message: 'Email and password are required' });
         }
 
         const users = await readUsers();
-        const user = users.find((u) => u.email.toLowerCase() === String(email).toLowerCase());
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const user = users.find((u) => String(u?.email || '').toLowerCase() === normalizedEmail);
 
-        const hasPasswordHash = typeof user?.password === 'string' && user.password.length > 0;
-        if (!user || !hasPasswordHash || !(await bcrypt.compare(password, user.password))) {
+        const isPasswordValid = user ? await safeComparePassword(password, user.password) : false;
+        if (!user || !isPasswordValid) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
