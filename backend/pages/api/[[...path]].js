@@ -8,10 +8,41 @@ if (process.env.NODE_ENV !== 'production') {
 
 let app;
 
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:8081',
+  'http://localhost:8082',
+  'http://127.0.0.1:8081',
+  'http://127.0.0.1:8082',
+];
+
+const envAllowedOrigins = String(process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...envAllowedOrigins])];
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  return allowedOrigins.includes(origin);
+}
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 function createApp() {
   const api = express();
 
-  api.use(cors());
+  api.use(cors(corsOptions));
+  api.options('*', cors(corsOptions));
   api.use(express.json());
   api.use(express.urlencoded({ extended: true }));
 
@@ -42,6 +73,21 @@ function createApp() {
 }
 
 export default function handler(req, res) {
+  const requestOrigin = req.headers?.origin;
+  if (isAllowedOrigin(requestOrigin)) {
+    if (requestOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+      res.setHeader('Vary', 'Origin');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
   if (!app) {
     app = createApp();
   }

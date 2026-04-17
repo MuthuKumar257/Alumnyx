@@ -10,13 +10,40 @@ if (process.env.NODE_ENV !== 'production') {
 
 const app = express();
 const server = http.createServer(app);
+
+const DEFAULT_ALLOWED_ORIGINS = [
+    'http://localhost:8081',
+    'http://localhost:8082',
+    'http://127.0.0.1:8081',
+    'http://127.0.0.1:8082',
+];
+
+const envAllowedOrigins = String(process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+const allowedOrigins = [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...envAllowedOrigins])];
+
+const corsOptions = {
+    origin(origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 const io = new Server(server, {
     cors: {
-        origin: '*',
+        origin: allowedOrigins,
     },
 });
 
-app.use(cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
