@@ -566,6 +566,7 @@ const writeUsers = async (users) => {
         const isVerified = Boolean(u.isVerified);
         const createdAt = parseDateOrNow(u.createdAt);
         const updatedAt = parseNullableDate(u.updatedAt) || new Date();
+        let lastLegacyError = null;
 
         try {
             await prisma.$executeRawUnsafe(
@@ -591,28 +592,91 @@ const writeUsers = async (users) => {
             continue;
         } catch (camelError) {
             console.error('writeUsers legacy "User" fallback failed:', camelError?.message || camelError);
+            lastLegacyError = camelError;
         }
 
-        await prisma.$executeRawUnsafe(
-            `
-            INSERT INTO users (id, email, password, role, is_verified, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (id)
-            DO UPDATE SET
-              email = EXCLUDED.email,
-              password = EXCLUDED.password,
-              role = EXCLUDED.role,
-              is_verified = EXCLUDED.is_verified,
-              updated_at = EXCLUDED.updated_at
-            `,
-            u.id,
-            email,
-            password,
-            role,
-            isVerified,
-            createdAt,
-            updatedAt
-        );
+        try {
+            await prisma.$executeRawUnsafe(
+                `
+                INSERT INTO "User" (id, email, password, role, "isVerified", "createdAt", "updatedAt")
+                VALUES ($1, $2, $3, $4::"Role", $5, $6, $7)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                  email = EXCLUDED.email,
+                  password = EXCLUDED.password,
+                  role = EXCLUDED.role,
+                  "isVerified" = EXCLUDED."isVerified",
+                  "updatedAt" = EXCLUDED."updatedAt"
+                `,
+                u.id,
+                email,
+                password,
+                role,
+                isVerified,
+                createdAt,
+                updatedAt
+            );
+            continue;
+        } catch (camelEnumError) {
+            console.error('writeUsers legacy "User" enum-cast fallback failed:', camelEnumError?.message || camelEnumError);
+            lastLegacyError = camelEnumError;
+        }
+
+        try {
+            await prisma.$executeRawUnsafe(
+                `
+                INSERT INTO users (id, email, password, role, is_verified, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                  email = EXCLUDED.email,
+                  password = EXCLUDED.password,
+                  role = EXCLUDED.role,
+                  is_verified = EXCLUDED.is_verified,
+                  updated_at = EXCLUDED.updated_at
+                `,
+                u.id,
+                email,
+                password,
+                role,
+                isVerified,
+                createdAt,
+                updatedAt
+            );
+            continue;
+        } catch (snakeError) {
+            console.error('writeUsers legacy users fallback failed:', snakeError?.message || snakeError);
+            lastLegacyError = snakeError;
+        }
+
+        try {
+            await prisma.$executeRawUnsafe(
+                `
+                INSERT INTO users (id, email, password, role, is_verified, created_at, updated_at)
+                VALUES ($1, $2, $3, $4::role, $5, $6, $7)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                  email = EXCLUDED.email,
+                  password = EXCLUDED.password,
+                  role = EXCLUDED.role,
+                  is_verified = EXCLUDED.is_verified,
+                  updated_at = EXCLUDED.updated_at
+                `,
+                u.id,
+                email,
+                password,
+                role,
+                isVerified,
+                createdAt,
+                updatedAt
+            );
+            continue;
+        } catch (snakeEnumError) {
+            console.error('writeUsers legacy users enum-cast fallback failed:', snakeEnumError?.message || snakeEnumError);
+            lastLegacyError = snakeEnumError;
+        }
+
+        throw lastLegacyError || new Error('Legacy user upsert failed');
     }
 };
 
