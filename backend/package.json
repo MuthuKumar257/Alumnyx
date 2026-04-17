@@ -10,6 +10,7 @@
     "init": "node node_modules/prisma/build/index.js db push --schema=prisma/schema.prisma",
     "seed": "node seed.js",
     "seed:posts": "node scripts/postSamplePosts.js",
+    "sync:supabase": "node scripts/syncToSupabase.js",
     "backfill:profiles": "node scripts/backfillProfiles.js",
     "check:db": "node scripts/checkPostgresStorage.js",
     "smoke": "node scripts/smokeCheckApi.js",
