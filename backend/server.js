@@ -4,7 +4,9 @@ const dotenv = require('dotenv');
 const http = require('http');
 const { Server } = require('socket.io');
 
-dotenv.config();
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config();
+}
 
 const app = express();
 const server = http.createServer(app);
