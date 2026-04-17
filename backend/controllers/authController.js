@@ -1,6 +1,7 @@
 ﻿const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const prisma = require('../config/prisma');
 const { readJson, queueWrite, readUsers, writeUsers, getUniversityName } = require('../storage/jsonStorage');
 const { withProfile, sanitizeUser, nowIso } = require('../storage/viewHelpers');
 
@@ -28,6 +29,143 @@ const safeGetUniversityName = async () => {
         console.warn('University setting unavailable; using fallback name:', error?.message || error);
         return 'Alumnyx University';
     }
+};
+
+const safePersistSingleUser = async (user) => {
+    const id = String(user.id || '').trim();
+    const email = String(user.email || '').trim();
+    const password = user.password;
+    const role = normalizeRole(user.role);
+    const isVerified = Boolean(user.isVerified);
+    const createdAt = user.createdAt ? new Date(user.createdAt) : new Date();
+    const updatedAt = user.updatedAt ? new Date(user.updatedAt) : new Date();
+
+    const attempts = [
+        async () => {
+            await prisma.user.upsert({
+                where: { id },
+                create: {
+                    id,
+                    email,
+                    password,
+                    role,
+                    isVerified,
+                    isSuperAdmin: Boolean(user.isSuperAdmin),
+                    alumniStatus: role === 'ALUMNI' ? (user.alumniStatus || 'PENDING') : null,
+                    createdAt,
+                },
+                update: {
+                    email,
+                    password,
+                    role,
+                    isVerified,
+                    isSuperAdmin: Boolean(user.isSuperAdmin),
+                    alumniStatus: role === 'ALUMNI' ? (user.alumniStatus || 'PENDING') : null,
+                    updatedAt,
+                },
+            });
+        },
+        async () => {
+            await prisma.$executeRawUnsafe(
+                `
+                INSERT INTO "User" (id, email, password, role, "isVerified", "createdAt", "updatedAt")
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                  email = EXCLUDED.email,
+                  password = EXCLUDED.password,
+                  role = EXCLUDED.role,
+                  "isVerified" = EXCLUDED."isVerified",
+                  "updatedAt" = EXCLUDED."updatedAt"
+                `,
+                id,
+                email,
+                password,
+                role,
+                isVerified,
+                createdAt,
+                updatedAt
+            );
+        },
+        async () => {
+            await prisma.$executeRawUnsafe(
+                `
+                INSERT INTO "User" (id, email, password, role, "isVerified", "createdAt", "updatedAt")
+                VALUES ($1, $2, $3, $4::"Role", $5, $6, $7)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                  email = EXCLUDED.email,
+                  password = EXCLUDED.password,
+                  role = EXCLUDED.role,
+                  "isVerified" = EXCLUDED."isVerified",
+                  "updatedAt" = EXCLUDED."updatedAt"
+                `,
+                id,
+                email,
+                password,
+                role,
+                isVerified,
+                createdAt,
+                updatedAt
+            );
+        },
+        async () => {
+            await prisma.$executeRawUnsafe(
+                `
+                INSERT INTO users (id, email, password, role, is_verified, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                  email = EXCLUDED.email,
+                  password = EXCLUDED.password,
+                  role = EXCLUDED.role,
+                  is_verified = EXCLUDED.is_verified,
+                  updated_at = EXCLUDED.updated_at
+                `,
+                id,
+                email,
+                password,
+                role,
+                isVerified,
+                createdAt,
+                updatedAt
+            );
+        },
+        async () => {
+            await prisma.$executeRawUnsafe(
+                `
+                INSERT INTO users (id, email, password, role, is_verified, created_at, updated_at)
+                VALUES ($1, $2, $3, $4::role, $5, $6, $7)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                  email = EXCLUDED.email,
+                  password = EXCLUDED.password,
+                  role = EXCLUDED.role,
+                  is_verified = EXCLUDED.is_verified,
+                  updated_at = EXCLUDED.updated_at
+                `,
+                id,
+                email,
+                password,
+                role,
+                isVerified,
+                createdAt,
+                updatedAt
+            );
+        },
+    ];
+
+    let lastError = null;
+    for (const attempt of attempts) {
+        try {
+            await attempt();
+            return;
+        } catch (error) {
+            lastError = error;
+        }
+    }
+
+    throw lastError || new Error('Unable to persist user');
 };
 
 const generateToken = (id) =>
@@ -95,7 +233,12 @@ const alumniRegister = async (req, res) => {
             resumeUrl: null,
         };
 
-        await writeUsers([...users, user]);
+        try {
+            await writeUsers([...users, user]);
+        } catch (writeError) {
+            console.warn('Bulk user write failed during alumni register; trying single-user fallback:', writeError?.message || writeError);
+            await safePersistSingleUser(user);
+        }
         await safeQueueProfilesWrite([...profiles, profile]);
 
         // Do NOT return a token — account must be approved by admin first
@@ -154,7 +297,12 @@ const registerUser = async (req, res) => {
             resumeUrl: null,
         };
 
-        await writeUsers([...users, user]);
+        try {
+            await writeUsers([...users, user]);
+        } catch (writeError) {
+            console.warn('Bulk user write failed during register; trying single-user fallback:', writeError?.message || writeError);
+            await safePersistSingleUser(user);
+        }
         await safeQueueProfilesWrite([...profiles, profile]);
 
         const safe = sanitizeUser(withProfile(user, [...profiles, profile]));
