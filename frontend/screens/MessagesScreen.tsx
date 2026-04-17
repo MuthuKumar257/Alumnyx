@@ -7,7 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
 import { alumnyxTheme } from '../theme/alumnyxTheme';
 
-const socketUrl = 'https://api-alumnyx.onrender.com';
+const socketUrl = String(axiosClient.defaults.baseURL || '').replace(/\/api\/?$/i, '');
 
 export default function MessagesScreen() {
     const navigation = useNavigation<any>();

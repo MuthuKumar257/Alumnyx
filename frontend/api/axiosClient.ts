@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-const PRODUCTION_API_URL = 'https://api-alumnyx.onrender.com/api';
+const PRODUCTION_API_URL = 'https://api-alumnyx.onrender.com';
 
 const ensureApiPath = (baseUrl: string) => {
     const trimmed = baseUrl.trim().replace(/\/+$/, '');
@@ -10,7 +10,7 @@ const ensureApiPath = (baseUrl: string) => {
 };
 
 const resolveApiUrl = () => {
-    // Keep an escape hatch for local testing via Expo extra if needed.
+    // Environment-level override remains available for local testing.
     const configuredBaseUrl =
         process.env.EXPO_PUBLIC_API_BASE_URL ||
         Constants.expoConfig?.extra?.apiBaseUrl ||

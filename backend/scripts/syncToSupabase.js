@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 
 // Load both files when present; .env.local overrides .env.
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
-dotenv.config({ path: path.join(__dirname, '..', '.env.local'), override: true });
+dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 
 const sourceDbUrl = process.env.SOURCE_DATABASE_URL || process.env.DATABASE_URL;
 const targetDbUrl = process.env.SUPABASE_DATABASE_URL;
