@@ -505,7 +505,17 @@ const styles = StyleSheet.create({
     deleteBtn: { padding: 6, borderRadius: 8, backgroundColor: '#FFDAD6' },
     assignSection: { marginTop: 10 },
     assignLabel: { color: '#43474E', fontSize: 11, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase' },
-    select: { border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 10px', fontSize: 12, background: '#FFFFFF', width: '100%', marginBottom: 8 } as any,
+    select: {
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        fontSize: 12,
+        backgroundColor: '#FFFFFF',
+        width: '100%',
+        marginBottom: 8,
+    } as any,
     saveBtn: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
     saveBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
     assignedBadge: {

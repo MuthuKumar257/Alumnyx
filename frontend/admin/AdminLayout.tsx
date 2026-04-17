@@ -499,7 +499,7 @@ export default function AdminLayout({ initialSection, currentUser, onLogout }: P
                                     {!isAdminEdit ? (
                                         <View style={styles.editField}>
                                             <Text style={styles.editLabel}>Role</Text>
-                                            <select value={editForm.role} onChange={(e) => setEdit('role', (e.target as HTMLSelectElement).value)} style={{ border: '1px solid #E2E8F0', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: '#0F172A', background: '#F8FAFC', width: '100%' } as any}>
+                                            <select value={editForm.role} onChange={(e) => setEdit('role', (e.target as HTMLSelectElement).value)} style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC', width: '100%' } as any}>
                                                 <option value="STUDENT">STUDENT</option>
                                                 <option value="ALUMNI">ALUMNI</option>
                                                 {canManageAdmins ? <option value="ADMIN">ADMIN</option> : null}
@@ -513,14 +513,14 @@ export default function AdminLayout({ initialSection, currentUser, onLogout }: P
                                         <View style={styles.editRow}>
                                             <View style={styles.editField}>
                                                 <Text style={styles.editLabel}>Verified</Text>
-                                                <select value={editForm.isVerified} onChange={(e) => setEdit('isVerified', (e.target as HTMLSelectElement).value)} style={{ border: '1px solid #E2E8F0', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: '#0F172A', background: '#F8FAFC', width: '100%' } as any}>
+                                                <select value={editForm.isVerified} onChange={(e) => setEdit('isVerified', (e.target as HTMLSelectElement).value)} style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC', width: '100%' } as any}>
                                                     <option value="true">Yes</option>
                                                     <option value="false">No</option>
                                                 </select>
                                             </View>
                                             <View style={styles.editField}>
                                                 <Text style={styles.editLabel}>Alumni Status</Text>
-                                                <select value={editForm.alumniStatus} onChange={(e) => setEdit('alumniStatus', (e.target as HTMLSelectElement).value)} style={{ border: '1px solid #E2E8F0', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: '#0F172A', background: '#F8FAFC', width: '100%' } as any}>
+                                                <select value={editForm.alumniStatus} onChange={(e) => setEdit('alumniStatus', (e.target as HTMLSelectElement).value)} style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC', width: '100%' } as any}>
                                                     <option value="">None</option>
                                                     <option value="PENDING">PENDING</option>
                                                     <option value="APPROVED">APPROVED</option>
@@ -544,7 +544,7 @@ export default function AdminLayout({ initialSection, currentUser, onLogout }: P
                                         <View style={styles.editRow}>
                                             <View style={styles.editField}>
                                                 <Text style={styles.editLabel}>Department</Text>
-                                                <select value={editForm.department} onChange={(e) => setEdit('department', (e.target as HTMLSelectElement).value)} style={{ border: '1px solid #E2E8F0', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: '#0F172A', background: '#F8FAFC', width: '100%' } as any}>
+                                                <select value={editForm.department} onChange={(e) => setEdit('department', (e.target as HTMLSelectElement).value)} style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC', width: '100%' } as any}>
                                                     <option value="">None</option>
                                                     {departments.map((d) => (
                                                         <option key={d} value={d}>{d.toUpperCase()}</option>

@@ -65,10 +65,10 @@ export default function WebSidebarLayout() {
                 {/* Logo */}
                 <View style={styles.logoSection}>
                     <View style={styles.logoMark}>
-                        <Image source={require('../assets/webicon.png')} style={styles.logoMarkImage} />
+                        <Image source={require('../assets/webicon.png')} resizeMode="contain" style={styles.logoMarkImage} />
                     </View>
                     <View>
-                        <Image source={require('../assets/text.png')} style={styles.logoImage} />
+                        <Image source={require('../assets/text.png')} resizeMode="contain" tintColor="#AFC8F0" style={styles.logoImage} />
                         <Text style={styles.logoTagline}>Connect · Grow · Succeed</Text>
                     </View>
                 </View>
@@ -154,10 +154,7 @@ const styles = StyleSheet.create({
         width: SIDEBAR_WIDTH,
         backgroundColor: alumnyxTheme.colors.primary,
         flexDirection: 'column',
-        shadowColor: '#000',
-        shadowOffset: { width: 2, height: 0 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
+        boxShadow: '2px 0px 8px rgba(0, 0, 0, 0.15)',
         elevation: 8,
     },
     logoSection: {
@@ -180,7 +177,6 @@ const styles = StyleSheet.create({
     logoMarkImage: {
         width: 22,
         height: 22,
-        resizeMode: 'contain',
     },
     logoText: {
         color: '#F8FAFC',
@@ -314,8 +310,6 @@ const styles = StyleSheet.create({
     logoImage: {
         width: 124,
         height: 24,
-        resizeMode: 'contain',
-        tintColor: '#AFC8F0',
     },
     mainContent: {
         flex: 1,
@@ -332,10 +326,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         borderBottomWidth: 1,
         borderBottomColor: alumnyxTheme.colors.border,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
+        boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.05)',
         elevation: 2,
     },
     topBarTitle: {

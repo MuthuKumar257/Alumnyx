@@ -8,7 +8,7 @@ export default function SplashScreen({ navigation }: any) {
         Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 1500,
-            useNativeDriver: true,
+            useNativeDriver: false,
         }).start();
 
         // Simulate app loading/initialization time
@@ -22,7 +22,7 @@ export default function SplashScreen({ navigation }: any) {
     return (
         <View style={styles.container}>
             <Animated.View style={[styles.content, { opacity: fadeAnim }]}> 
-                <Image source={require('../assets/splash.png')} style={styles.fullscreenImage} />
+                <Image source={require('../assets/splash.png')} resizeMode="cover" style={styles.fullscreenImage} />
                 {/* <Text style={styles.tagline}>Connect. Grow. Succeed.</Text> */}
             </Animated.View>
         </View>
@@ -47,7 +47,6 @@ const styles = StyleSheet.create({
     fullscreenImage: {
         width: '100%',
         height: '100%',
-        resizeMode: 'cover',
     },
     tagline: {
         fontSize: 18,

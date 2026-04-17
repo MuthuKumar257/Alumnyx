@@ -201,7 +201,7 @@ export default function EditProfileScreen({ navigation }: any) {
                         <select
                             value={formData.department}
                             onChange={(e) => setFormData({ ...formData, department: (e.target as HTMLSelectElement).value })}
-                            style={{ border: '1px solid #E5E5E5', borderRadius: 8, padding: '12px', marginBottom: 10, background: '#FFFFFF', color: '#1A1A1A', width: '100%' } as any}
+                            style={{ borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 8, padding: 12, marginBottom: 10, backgroundColor: '#FFFFFF', color: '#1A1A1A', width: '100%' } as any}
                         >
                             <option value="">Select Department</option>
                             {DEPARTMENTS.map((d) => (
