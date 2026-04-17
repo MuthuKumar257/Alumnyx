@@ -11,7 +11,8 @@
     "seed:posts": "node scripts/postSamplePosts.js",
     "backfill:profiles": "node scripts/backfillProfiles.js",
     "check:db": "node scripts/checkPostgresStorage.js",
-    "smoke": "node scripts/smokeCheckApi.js"
+    "smoke": "node scripts/smokeCheckApi.js",
+    "smoke:auth": "node scripts/authSmokeCheck.js"
   },
   "keywords": [],
   "author": "",

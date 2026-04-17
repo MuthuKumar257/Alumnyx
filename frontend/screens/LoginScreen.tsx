@@ -15,7 +15,7 @@ export default function LoginScreen({ navigation, route }: any) {
     const { login } = useContext(AuthContext);
     const adminOnly = !!route?.params?.adminOnly;
     const [role, setRole] = useState<Role>(adminOnly ? 'ADMIN' : 'STUDENT');
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [emailFocused, setEmailFocused] = useState(false);
@@ -25,14 +25,14 @@ export default function LoginScreen({ navigation, route }: any) {
 
     const handleLogin = async () => {
         setError('');
-        if (!username.trim() || !password) {
-            setError('Please enter your username and password.');
+        if (!email.trim() || !password) {
+            setError('Please enter your email and password.');
             return;
         }
         setLoading(true);
         try {
             const expectedRole = adminOnly ? 'ADMIN' : role;
-            await login({ email: username.trim(), password }, expectedRole);
+            await login({ email: email.trim(), password }, expectedRole);
         } catch (err: any) {
             setError(typeof err === 'string' ? err : 'Invalid credentials. Please try again.');
         } finally {
@@ -41,7 +41,7 @@ export default function LoginScreen({ navigation, route }: any) {
     };
 
     const roleLabel = role.charAt(0) + role.slice(1).toLowerCase();
-    const emailRaised = emailFocused || !!username.trim();
+    const emailRaised = emailFocused || !!email.trim();
     const passwordRaised = passwordFocused || !!password;
 
     return (
@@ -52,7 +52,7 @@ export default function LoginScreen({ navigation, route }: any) {
                 <View style={styles.crest}>
                     <Image source={require('../assets/icon.png')} style={styles.logoImage} />
                 </View>
-                <Image source={require('../assets/mobiletext.png')} style={styles.wordmarkImage} />
+                <Image source={require('../assets/mobiletext.png')} resizeMode="contain" style={styles.wordmarkImage} />
                 <Text style={styles.tagline}>THE HERITAGE NETWORK</Text>
             </View>
 
@@ -84,8 +84,8 @@ export default function LoginScreen({ navigation, route }: any) {
                 <View style={styles.inputWrap}>
                     <TextInput
                         style={[styles.input, emailFocused && styles.inputFocused]}
-                        value={username}
-                        onChangeText={(v) => { setUsername(v); setError(''); }}
+                        value={email}
+                        onChangeText={(v) => { setEmail(v); setError(''); }}
                         onFocus={() => setEmailFocused(true)}
                         onBlur={() => setEmailFocused(false)}
                         autoCapitalize="none"
@@ -176,10 +176,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: 18,
         backgroundColor: '#002147',
-        shadowColor: '#D4AF37',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
+        boxShadow: '0px 0px 12px rgba(212, 175, 55, 0.30)',
         elevation: 3,
     },
     logoImage: {
@@ -198,7 +195,6 @@ const styles = StyleSheet.create({
     wordmarkImage: {
         width: 220,
         height: 42,
-        resizeMode: 'contain',
     },
     tagline: {
         marginTop: 6,
@@ -218,10 +214,7 @@ const styles = StyleSheet.create({
         paddingBottom: 34,
         borderTopWidth: 1,
         borderTopColor: 'rgba(212,175,55,0.25)',
-        shadowColor: '#002147',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
+        boxShadow: '0px -4px 12px rgba(0, 33, 71, 0.08)',
         elevation: 5,
         marginTop: 'auto',
     },

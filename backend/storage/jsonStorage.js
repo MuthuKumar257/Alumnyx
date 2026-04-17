@@ -513,45 +513,107 @@ const readAlumni = async () => {
 // Write users split into the three role-specific files
 const writeUsers = async (users) => {
     const rows = normalizeUsers(users);
-    const existing = await prisma.user.findMany({ select: { id: true } });
-    const incomingIds = new Set(rows.map((u) => u.id));
-    const idsToDelete = existing.map((u) => u.id).filter((id) => !incomingIds.has(id));
+    try {
+        const existing = await prisma.user.findMany({ select: { id: true } });
+        const incomingIds = new Set(rows.map((u) => u.id));
+        const idsToDelete = existing.map((u) => u.id).filter((id) => !incomingIds.has(id));
 
-    await prisma.$transaction(async (tx) => {
-        if (idsToDelete.length > 0) {
-            await tx.user.deleteMany({ where: { id: { in: idsToDelete } } });
+        await prisma.$transaction(async (tx) => {
+            if (idsToDelete.length > 0) {
+                await tx.user.deleteMany({ where: { id: { in: idsToDelete } } });
+            }
+
+            for (const u of rows) {
+                const role = enumOrFallback(['STUDENT', 'ALUMNI', 'ADMIN'], u.role, 'STUDENT');
+                const normalizedAlumniStatus = u.alumniStatus
+                    ? enumOrFallback(['PENDING', 'APPROVED', 'REJECTED', 'VERIFIED'], u.alumniStatus, 'PENDING')
+                    : null;
+
+                await tx.user.upsert({
+                    where: { id: u.id },
+                    create: {
+                        id: u.id,
+                        email: String(u.email || '').trim(),
+                        password: u.password,
+                        role,
+                        isVerified: Boolean(u.isVerified),
+                        isSuperAdmin: Boolean(u.isSuperAdmin),
+                        alumniStatus: role === 'ALUMNI' ? normalizedAlumniStatus : null,
+                        createdAt: parseDateOrNow(u.createdAt),
+                    },
+                    update: {
+                        email: String(u.email || '').trim(),
+                        password: u.password,
+                        role,
+                        isVerified: Boolean(u.isVerified),
+                        isSuperAdmin: Boolean(u.isSuperAdmin),
+                        alumniStatus: role === 'ALUMNI' ? normalizedAlumniStatus : null,
+                        updatedAt: parseNullableDate(u.updatedAt),
+                    },
+                });
+            }
+        });
+        return;
+    } catch (error) {
+        console.error('writeUsers primary write failed; using legacy fallback:', error?.message || error);
+    }
+
+    // Legacy fallback for deployments where User table misses newer columns.
+    for (const u of rows) {
+        const role = enumOrFallback(['STUDENT', 'ALUMNI', 'ADMIN'], u.role, 'STUDENT');
+        const email = String(u.email || '').trim();
+        const password = u.password;
+        const isVerified = Boolean(u.isVerified);
+        const createdAt = parseDateOrNow(u.createdAt);
+        const updatedAt = parseNullableDate(u.updatedAt) || new Date();
+
+        try {
+            await prisma.$executeRawUnsafe(
+                `
+                INSERT INTO "User" (id, email, password, role, "isVerified", "createdAt", "updatedAt")
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                  email = EXCLUDED.email,
+                  password = EXCLUDED.password,
+                  role = EXCLUDED.role,
+                  "isVerified" = EXCLUDED."isVerified",
+                  "updatedAt" = EXCLUDED."updatedAt"
+                `,
+                u.id,
+                email,
+                password,
+                role,
+                isVerified,
+                createdAt,
+                updatedAt
+            );
+            continue;
+        } catch (camelError) {
+            console.error('writeUsers legacy "User" fallback failed:', camelError?.message || camelError);
         }
 
-        for (const u of rows) {
-            const role = enumOrFallback(['STUDENT', 'ALUMNI', 'ADMIN'], u.role, 'STUDENT');
-            const normalizedAlumniStatus = u.alumniStatus
-                ? enumOrFallback(['PENDING', 'APPROVED', 'REJECTED', 'VERIFIED'], u.alumniStatus, 'PENDING')
-                : null;
-
-            await tx.user.upsert({
-                where: { id: u.id },
-                create: {
-                    id: u.id,
-                    email: String(u.email || '').trim(),
-                    password: u.password,
-                    role,
-                    isVerified: Boolean(u.isVerified),
-                    isSuperAdmin: Boolean(u.isSuperAdmin),
-                    alumniStatus: role === 'ALUMNI' ? normalizedAlumniStatus : null,
-                    createdAt: parseDateOrNow(u.createdAt),
-                },
-                update: {
-                    email: String(u.email || '').trim(),
-                    password: u.password,
-                    role,
-                    isVerified: Boolean(u.isVerified),
-                    isSuperAdmin: Boolean(u.isSuperAdmin),
-                    alumniStatus: role === 'ALUMNI' ? normalizedAlumniStatus : null,
-                    updatedAt: parseNullableDate(u.updatedAt),
-                },
-            });
-        }
-    });
+        await prisma.$executeRawUnsafe(
+            `
+            INSERT INTO users (id, email, password, role, is_verified, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (id)
+            DO UPDATE SET
+              email = EXCLUDED.email,
+              password = EXCLUDED.password,
+              role = EXCLUDED.role,
+              is_verified = EXCLUDED.is_verified,
+              updated_at = EXCLUDED.updated_at
+            `,
+            u.id,
+            email,
+            password,
+            role,
+            isVerified,
+            createdAt,
+            updatedAt
+        );
+    }
 };
 
 const writeStudents = async (students) => {

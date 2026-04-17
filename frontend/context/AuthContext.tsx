@@ -77,6 +77,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(userData);
         } catch (error: any) {
             if (typeof error === 'string') throw error;
+            if (error?.response?.status === 401) {
+                throw 'Invalid email or password. Please use your email address (not username) and try again.';
+            }
             throw error.response?.data?.message || 'Login failed';
         }
     };

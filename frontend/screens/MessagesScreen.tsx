@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, SafeAreaView, ActivityIndicator, ScrollView, Alert, Share } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, SafeAreaView, ActivityIndicator, ScrollView, Alert, Share, Platform } from 'react-native';
 import { io, Socket } from 'socket.io-client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Search, MoreVertical, PenSquare, Share2, Edit3, ChevronRight } from 'lucide-react-native';
@@ -7,7 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
 import { alumnyxTheme } from '../theme/alumnyxTheme';
 
-const socketUrl = 'https://alumnyx.onrender.com';
+const socketUrl = 'https://api-alumnyx.onrender.com';
 
 export default function MessagesScreen() {
     const navigation = useNavigation<any>();
@@ -543,10 +543,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#4A40E0',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#4A40E0',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.32,
-        shadowRadius: 14,
+        boxShadow: '0px 8px 14px rgba(74, 64, 224, 0.32)',
         elevation: 6,
     },
     fabIcon: { color: '#F4F1FF', fontSize: 25, fontWeight: '700' },

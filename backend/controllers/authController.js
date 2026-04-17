@@ -4,6 +4,32 @@ const { v4: uuidv4 } = require('uuid');
 const { readJson, queueWrite, readUsers, writeUsers, getUniversityName } = require('../storage/jsonStorage');
 const { withProfile, sanitizeUser, nowIso } = require('../storage/viewHelpers');
 
+const safeReadProfiles = async () => {
+    try {
+        return await readJson('profiles');
+    } catch (error) {
+        console.warn('Profiles unavailable; continuing without profile reads:', error?.message || error);
+        return [];
+    }
+};
+
+const safeQueueProfilesWrite = async (profiles) => {
+    try {
+        await queueWrite('profiles', profiles);
+    } catch (error) {
+        console.warn('Profiles write unavailable; user created without profile row:', error?.message || error);
+    }
+};
+
+const safeGetUniversityName = async () => {
+    try {
+        return await getUniversityName();
+    } catch (error) {
+        console.warn('University setting unavailable; using fallback name:', error?.message || error);
+        return 'Alumnyx University';
+    }
+};
+
 const generateToken = (id) =>
     jwt.sign({ id }, process.env.JWT_SECRET || 'alumnyx_jwt_secret', { expiresIn: '30d' });
 
@@ -31,8 +57,8 @@ const alumniRegister = async (req, res) => {
         }
 
         const users = await readUsers();
-        const profiles = await readJson('profiles');
-        const universityName = await getUniversityName();
+        const profiles = await safeReadProfiles();
+        const universityName = await safeGetUniversityName();
 
         const existing = users.find((u) => u.email.toLowerCase() === String(email).toLowerCase());
         if (existing) {
@@ -70,7 +96,7 @@ const alumniRegister = async (req, res) => {
         };
 
         await writeUsers([...users, user]);
-        await queueWrite('profiles', [...profiles, profile]);
+        await safeQueueProfilesWrite([...profiles, profile]);
 
         // Do NOT return a token — account must be approved by admin first
         res.status(201).json({ message: 'Registration successful. Your account is pending admin approval. You will be able to log in once approved.' });
@@ -89,8 +115,8 @@ const registerUser = async (req, res) => {
         }
 
         const users = await readUsers();
-        const profiles = await readJson('profiles');
-        const universityName = await getUniversityName();
+        const profiles = await safeReadProfiles();
+        const universityName = await safeGetUniversityName();
 
         const existingUser = users.find((u) => u.email.toLowerCase() === String(email).toLowerCase());
         if (existingUser) {
@@ -129,7 +155,7 @@ const registerUser = async (req, res) => {
         };
 
         await writeUsers([...users, user]);
-        await queueWrite('profiles', [...profiles, profile]);
+        await safeQueueProfilesWrite([...profiles, profile]);
 
         const safe = sanitizeUser(withProfile(user, [...profiles, profile]));
         res.status(201).json({ ...safe, token: generateToken(user.id) });
@@ -195,4 +221,21 @@ const getMe = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, alumniRegister, loginUser, getMe };
+const checkEmailExists = async (req, res) => {
+    try {
+        const email = String(req.query?.email || '').trim().toLowerCase();
+        if (!email) {
+            return res.status(400).json({ message: 'Email query parameter is required' });
+        }
+
+        const users = await readUsers();
+        const exists = users.some((u) => String(u?.email || '').toLowerCase() === email);
+
+        res.json({ email, exists });
+    } catch (error) {
+        console.error('Check email exists error:', error);
+        res.status(500).json({ message: 'Server error while checking email' });
+    }
+};
+
+module.exports = { registerUser, alumniRegister, loginUser, getMe, checkEmailExists };
