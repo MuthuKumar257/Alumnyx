@@ -4,7 +4,7 @@
   "description": "Alumnyx Alumni Networking Platform - Backend API",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node init_db.js; node server.js",
     "dev": "nodemon server.js",
     "init": "node node_modules/prisma/build/index.js db push --schema=prisma/schema.prisma",
     "seed": "node seed.js",
@@ -29,11 +29,11 @@
     "multer": "^1.4.5-lts.1",
     "pg": "^8.20.0",
     "socket.io": "^4.7.5",
+    "prisma": "^5.22.0",
     "uuid": "^9.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4",
-    "prisma": "^5.22.0"
+    "nodemon": "^3.1.4"
   }
 }
