@@ -245,7 +245,10 @@ const alumniRegister = async (req, res) => {
         res.status(201).json({ message: 'Registration successful. Your account is pending admin approval. You will be able to log in once approved.' });
     } catch (error) {
         console.error('Alumni register error:', error);
-        res.status(500).json({ message: 'Server error during registration' });
+        res.status(500).json({
+            message: 'Server error during registration',
+            detail: String(error?.message || 'unknown error').slice(0, 300),
+        });
     }
 };
 
@@ -309,7 +312,10 @@ const registerUser = async (req, res) => {
         res.status(201).json({ ...safe, token: generateToken(user.id) });
     } catch (error) {
         console.error('Register error:', error);
-        res.status(500).json({ message: 'Server error during registration' });
+        res.status(500).json({
+            message: 'Server error during registration',
+            detail: String(error?.message || 'unknown error').slice(0, 300),
+        });
     }
 };
 
