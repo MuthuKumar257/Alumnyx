@@ -4,13 +4,16 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./node_modules/expo/bin/cli start",
+    "start:fresh": "node ./scripts/start-fresh.js",
     "start:local": "node ./scripts/start-local.js",
     "android": "node ./node_modules/expo/bin/cli start --android",
     "android:local": "node ./scripts/start-local.js --android",
     "ios": "node ./node_modules/expo/bin/cli start --ios",
     "ios:local": "node ./scripts/start-local.js --ios",
     "web": "node ./node_modules/expo/bin/cli start --web",
-    "web:local": "node ./scripts/start-local.js --web"
+    "web:local": "node ./scripts/start-local.js --web",
+    "build:apk": "node ./node_modules/eas-cli/bin/run build --platform android --profile apk",
+    "build:aab": "node ./node_modules/eas-cli/bin/run build --platform android --profile production"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

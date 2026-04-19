@@ -1,17 +1,8 @@
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
-
-export default async function Page() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
-  const { data: todos } = await supabase.from('todos').select()
-
+export default function Page() {
   return (
-    <ul>
-      {todos?.map((todo) => (
-        <li key={todo.id}>{todo.name}</li>
-      ))}
-    </ul>
+    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '24px' }}>
+      <h1>Alumnyx Backend</h1>
+      <p>API routes are available under /api.</p>
+    </main>
   )
 }

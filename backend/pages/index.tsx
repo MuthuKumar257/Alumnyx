@@ -1,31 +1,35 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../utils/supabase'
 
-type Todo = {
-  id: string | number
-  name: string
+type HealthResponse = {
+  message?: string
 }
 
 export default function Page() {
-  const [todos, setTodos] = useState<Todo[]>([])
+  const [status, setStatus] = useState('Checking API...')
 
   useEffect(() => {
-    async function getTodos() {
-      const { data } = await supabase.from('todos').select()
+    async function checkApi() {
+      try {
+        const response = await fetch('/api')
+        if (!response.ok) {
+          setStatus(`API check failed (${response.status})`)
+          return
+        }
 
-      if (data) {
-        setTodos(data as Todo[])
+        const payload = (await response.json()) as HealthResponse
+        setStatus(payload.message || 'API is up')
+      } catch (error) {
+        setStatus(`API check failed: ${error instanceof Error ? error.message : 'unknown error'}`)
       }
     }
 
-    getTodos()
+    checkApi()
   }, [])
 
   return (
-    <ul>
-      {todos.map((todo) => (
-        <li key={todo.id}>{todo.name}</li>
-      ))}
-    </ul>
+    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '24px' }}>
+      <h1>Alumnyx Backend</h1>
+      <p>{status}</p>
+    </main>
   )
 }

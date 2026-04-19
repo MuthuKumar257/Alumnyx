@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import axiosClient from '../api/axiosClient';
+import { adminPost } from './api/adminHttp';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { CheckCircle2, XCircle, Download, Filter, Search, Upload, PlusCircle, GraduationCap, Building2, Clock3, ShieldCheck, ChevronRight, FileText, MoreHorizontal } from 'lucide-react-native';
 
@@ -139,9 +139,7 @@ export default function AlumniManagementPage({ alumni, pendingAlumni, department
             try {
                 const fd = new FormData();
                 fd.append('file', file);
-                const res = await axiosClient.post('/admin/alumni/bulk', fd, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
-                });
+                const res = await adminPost('/admin/alumni/bulk', fd);
                 setImportResult(res.data);
                 if ((res.data.created || 0) > 0 && (window as any).__adminReload) {
                     (window as any).__adminReload();

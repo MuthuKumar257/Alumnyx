@@ -2,12 +2,15 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-const PRODUCTION_API_URL = 'https://api-alumnyx.onrender.com';
+const PRODUCTION_API_URL = 'https://apialumnyx.development.catalystappsail.in';
 
 const ensureApiPath = (baseUrl: string) => {
     const trimmed = baseUrl.trim().replace(/\/+$/, '');
     return /\/api$/i.test(trimmed) ? trimmed : `${trimmed}/api`;
 };
+
+const normalizeLocalhostProtocol = (url: string) =>
+    url.replace(/^https:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, 'http://$1$2');
 
 const resolveApiUrl = () => {
     // Environment-level override remains available for local testing.
@@ -18,7 +21,7 @@ const resolveApiUrl = () => {
         (Constants as any).manifest?.extra?.apiBaseUrl;
 
     if (typeof configuredBaseUrl === 'string' && configuredBaseUrl.trim()) {
-        return ensureApiPath(configuredBaseUrl);
+        return ensureApiPath(normalizeLocalhostProtocol(configuredBaseUrl));
     }
 
     return ensureApiPath(PRODUCTION_API_URL);
@@ -33,8 +36,9 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(
     async (config) => {
+        const skipAuth = Boolean((config as any)?.skipAuth);
         const token = await AsyncStorage.getItem('token');
-        if (token) {
+        if (!skipAuth && token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;

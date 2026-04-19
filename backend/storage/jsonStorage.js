@@ -1,4 +1,6 @@
 const prisma = require('../config/prisma');
+const fs = require('fs/promises');
+const path = require('path');
 
 const FILES = {
     users: 'users.json',
@@ -20,6 +22,25 @@ const FILES = {
 };
 
 const DEFAULT_UNIVERSITY_NAME = 'Alumnyx University';
+const FALLBACK_SETTINGS_FILE = path.join(__dirname, 'fallback_settings.json');
+
+const readFallbackSettings = async () => {
+    try {
+        const raw = await fs.readFile(FALLBACK_SETTINGS_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+    } catch {
+        return {};
+    }
+};
+
+const writeFallbackSettings = async (settings) => {
+    const data = (settings && typeof settings === 'object' && !Array.isArray(settings)) ? settings : {};
+    const tmpFile = `${FALLBACK_SETTINGS_FILE}.tmp`;
+    await fs.mkdir(path.dirname(FALLBACK_SETTINGS_FILE), { recursive: true });
+    await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), 'utf8');
+    await fs.rename(tmpFile, FALLBACK_SETTINGS_FILE);
+};
 
 const enumOrFallback = (allowed, value, fallback) => {
     const normalized = String(value || '').toUpperCase();
@@ -105,18 +126,44 @@ const parseNullableDate = (value) => {
     return Number.isNaN(d.getTime()) ? undefined : d;
 };
 
+const safeReadMany = async (label, reader, fallback = []) => {
+    try {
+        return await reader();
+    } catch (error) {
+        console.warn(`readJson ${label} failed; using fallback:`, error?.message || error);
+        return fallback;
+    }
+};
+
 const upsertSetting = async (key, valueJson) => {
-    await prisma.appSetting.upsert({
-        where: { key },
-        update: { valueJson },
-        create: { key, valueJson },
-    });
+    try {
+        await prisma.appSetting.upsert({
+            where: { key },
+            update: { valueJson },
+            create: { key, valueJson },
+        });
+        return;
+    } catch (error) {
+        console.warn('upsertSetting DB write failed; using fallback settings file:', error?.message || error);
+    }
+
+    const current = await readFallbackSettings();
+    current[key] = valueJson;
+    await writeFallbackSettings(current);
 };
 
 const readSetting = async (key, fallback) => {
-    const row = await prisma.appSetting.findUnique({ where: { key } });
-    if (!row || row.valueJson == null) return fallback;
-    return row.valueJson;
+    try {
+        const row = await prisma.appSetting.findUnique({ where: { key } });
+        if (!row || row.valueJson == null) return fallback;
+        return row.valueJson;
+    } catch (error) {
+        console.warn('readSetting DB read failed; using fallback settings file:', error?.message || error);
+    }
+
+    const local = await readFallbackSettings();
+    if (!Object.prototype.hasOwnProperty.call(local, key)) return fallback;
+    return local[key];
 };
 
 const normalizeUniversityName = (value) => {
@@ -134,8 +181,10 @@ const getUniversityName = async () => {
     return normalizeUniversityName(value);
 };
 
-const setUniversityName = async (name) => {
-    if (await isUniversityNameLocked()) {
+const setUniversityName = async (name, options = {}) => {
+    const allowLockedUpdate = Boolean(options && options.allowLockedUpdate);
+
+    if (!allowLockedUpdate && await isUniversityNameLocked()) {
         const error = new Error('University name is locked and cannot be changed');
         error.code = 'UNIVERSITY_NAME_LOCKED';
         throw error;
@@ -146,7 +195,11 @@ const setUniversityName = async (name) => {
     await upsertSetting('universityNameLocked', true);
 
     // Keep profile college consistent for all users by syncing this setting.
-    await prisma.profile.updateMany({ data: { college: value } });
+    try {
+        await prisma.profile.updateMany({ data: { college: value } });
+    } catch (error) {
+        console.warn('setUniversityName profile sync skipped (DB unavailable):', error?.message || error);
+    }
     return value;
 };
 
@@ -165,7 +218,7 @@ const readJson = async (key) => {
     }
     if (key === 'profiles') {
         const universityName = await getUniversityName();
-        const rows = await prisma.profile.findMany();
+        const rows = await safeReadMany('profiles', () => prisma.profile.findMany(), []);
         return rows.map((p) => ({ ...mapProfile(p), college: universityName }));
     }
     if (key === 'connections') {
@@ -181,27 +234,27 @@ const readJson = async (key) => {
         return Array.isArray(data) ? data : [];
     }
     if (key === 'jobs') {
-        const rows = await prisma.job.findMany();
+        const rows = await safeReadMany('jobs', () => prisma.job.findMany(), []);
         return rows.map(mapJob);
     }
     if (key === 'jobApplications') {
-        const rows = await prisma.jobApplication.findMany();
+        const rows = await safeReadMany('jobApplications', () => prisma.jobApplication.findMany(), []);
         return rows.map(mapJobApplication);
     }
     if (key === 'mentorshipRequests') {
-        const rows = await prisma.mentorshipRequest.findMany();
+        const rows = await safeReadMany('mentorshipRequests', () => prisma.mentorshipRequest.findMany(), []);
         return rows.map(mapMentorshipRequest);
     }
     if (key === 'messages') {
-        const rows = await prisma.message.findMany();
+        const rows = await safeReadMany('messages', () => prisma.message.findMany(), []);
         return rows.map(mapMessage);
     }
     if (key === 'posts') {
-        const rows = await prisma.post.findMany({ include: { likes: true } });
+        const rows = await safeReadMany('posts', () => prisma.post.findMany({ include: { likes: true } }), []);
         return rows.map(mapPost);
     }
     if (key === 'adminLogs') {
-        const rows = await prisma.adminLog.findMany();
+        const rows = await safeReadMany('adminLogs', () => prisma.adminLog.findMany(), []);
         return rows.map(mapAdminLog);
     }
     if (key === 'departments') {

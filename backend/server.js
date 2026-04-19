@@ -23,11 +23,19 @@ const envAllowedOrigins = String(process.env.CORS_ORIGIN || '')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-const allowedOrigins = [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...envAllowedOrigins])];
+const normalizeOrigin = (origin) => String(origin || '').trim().toLowerCase().replace(/\/+$/, '');
+
+const EXPLICIT_ALLOWED_ORIGINS = ['http://localhost:8081'];
+
+const allowedOrigins = [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...EXPLICIT_ALLOWED_ORIGINS, ...envAllowedOrigins])]
+    .map(normalizeOrigin);
+
+const isLocalDevOrigin = (origin) => /^(https?:\/\/)(localhost|127\.0\.0\.1)(:\d+)?$/i.test(String(origin || '').trim());
 
 const corsOptions = {
     origin(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
+        const normalizedOrigin = normalizeOrigin(origin);
+        if (!origin || allowedOrigins.includes(normalizedOrigin) || isLocalDevOrigin(origin)) {
             return callback(null, true);
         }
         return callback(new Error(`CORS blocked for origin: ${origin}`));
@@ -35,6 +43,25 @@ const corsOptions = {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 };
+
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    const requestedHeaders = req.headers['access-control-request-headers'];
+
+    if (origin && (allowedOrigins.includes(normalizeOrigin(origin)) || isLocalDevOrigin(origin))) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+    }
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', requestedHeaders || 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+
+    next();
+});
 
 const io = new Server(server, {
     cors: {

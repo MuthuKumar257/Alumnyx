@@ -67,7 +67,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const login = async (data: any, expectedRole?: string) => {
         try {
-            const response = await axiosClient.post('/auth/login', data);
+            const formBody = new URLSearchParams(
+                Object.entries(data || {}).reduce((acc, [key, value]) => {
+                    if (value !== undefined && value !== null) {
+                        acc[key] = String(value);
+                    }
+                    return acc;
+                }, {} as Record<string, string>)
+            ).toString();
+
+            const response = await axiosClient.post('/auth/login', formBody, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+            });
             const userData = response.data;
             if (expectedRole && userData.role !== expectedRole) {
                 const roleName = expectedRole.charAt(0) + expectedRole.slice(1).toLowerCase();
@@ -86,7 +99,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const register = async (data: any) => {
         try {
-            const response = await axiosClient.post('/auth/register', data);
+            const formBody = new URLSearchParams(
+                Object.entries(data || {}).reduce((acc, [key, value]) => {
+                    if (value !== undefined && value !== null) {
+                        acc[key] = String(value);
+                    }
+                    return acc;
+                }, {} as Record<string, string>)
+            ).toString();
+
+            const response = await axiosClient.post('/auth/register', formBody, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+            });
             await AsyncStorage.setItem('token', response.data.token);
             setUser(response.data);
         } catch (error: any) {

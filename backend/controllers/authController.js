@@ -1,9 +1,61 @@
 ﻿const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs/promises');
+const path = require('path');
 const prisma = require('../config/prisma');
 const { readJson, queueWrite, readUsers, writeUsers, getUniversityName } = require('../storage/jsonStorage');
 const { withProfile, sanitizeUser, nowIso } = require('../storage/viewHelpers');
+
+const FALLBACK_USERS_FILE = path.join(__dirname, '..', 'storage', 'fallback_users.json');
+
+const readFallbackUsers = async () => {
+    try {
+        const raw = await fs.readFile(FALLBACK_USERS_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+};
+
+const writeFallbackUsers = async (users) => {
+    const rows = Array.isArray(users) ? users : [];
+    const tmpFile = `${FALLBACK_USERS_FILE}.tmp`;
+    await fs.mkdir(path.dirname(FALLBACK_USERS_FILE), { recursive: true });
+    await fs.writeFile(tmpFile, JSON.stringify(rows, null, 2), 'utf8');
+    await fs.rename(tmpFile, FALLBACK_USERS_FILE);
+};
+
+const upsertFallbackUser = async (user) => {
+    const users = await readFallbackUsers();
+    const email = String(user?.email || '').toLowerCase();
+    const idx = users.findIndex((u) => String(u?.email || '').toLowerCase() === email);
+    if (idx >= 0) {
+        users[idx] = { ...users[idx], ...user };
+    } else {
+        users.push(user);
+    }
+    await writeFallbackUsers(users);
+};
+
+const mergeUsersWithFallback = async (users) => {
+    const primary = Array.isArray(users) ? users : [];
+    const fallback = await readFallbackUsers();
+    if (!fallback.length) return primary;
+
+    const byEmail = new Map();
+    for (const u of primary) {
+        byEmail.set(String(u?.email || '').toLowerCase(), u);
+    }
+    for (const u of fallback) {
+        const key = String(u?.email || '').toLowerCase();
+        if (!byEmail.has(key)) {
+            byEmail.set(key, u);
+        }
+    }
+    return [...byEmail.values()];
+};
 
 const safeReadProfiles = async () => {
     try {
@@ -168,8 +220,16 @@ const safePersistSingleUser = async (user) => {
     throw lastError || new Error('Unable to persist user');
 };
 
-const generateToken = (id) =>
-    jwt.sign({ id }, process.env.JWT_SECRET || 'alumnyx_jwt_secret', { expiresIn: '30d' });
+const generateToken = (user) => {
+    const payload = {
+        id: user?.id,
+        email: user?.email,
+        role: user?.role,
+        isVerified: Boolean(user?.isVerified),
+        isSuperAdmin: Boolean(user?.isSuperAdmin),
+    };
+    return jwt.sign(payload, process.env.JWT_SECRET || 'alumnyx_jwt_secret', { expiresIn: '30d' });
+};
 
 const normalizeRole = (role) => {
     const value = String(role || '').toUpperCase();
@@ -184,6 +244,36 @@ const safeComparePassword = async (plainPassword, storedHash) => {
     } catch {
         return false;
     }
+};
+
+const ensureDefaultAdminExists = async (users) => {
+    const list = Array.isArray(users) ? users : [];
+    const hasAdmin = list.some((u) => String(u?.email || '').toLowerCase() === 'admin@alumnyx.com');
+    if (hasAdmin) {
+        return list;
+    }
+
+    const timestamp = nowIso();
+    const defaultAdmin = {
+        id: uuidv4(),
+        email: 'admin@alumnyx.com',
+        password: await bcrypt.hash('password123', 10),
+        role: 'ADMIN',
+        isVerified: true,
+        isSuperAdmin: true,
+        alumniStatus: null,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+    };
+
+    try {
+        await writeUsers([...list, defaultAdmin]);
+    } catch (error) {
+        console.warn('Primary admin bootstrap write failed; using file fallback:', error?.message || error);
+        await upsertFallbackUser(defaultAdmin);
+    }
+    console.log('Bootstrap: created missing default admin account.');
+    return [...list, defaultAdmin];
 };
 
 const alumniRegister = async (req, res) => {
@@ -309,7 +399,7 @@ const registerUser = async (req, res) => {
         await safeQueueProfilesWrite([...profiles, profile]);
 
         const safe = sanitizeUser(withProfile(user, [...profiles, profile]));
-        res.status(201).json({ ...safe, token: generateToken(user.id) });
+        res.status(201).json({ ...safe, token: generateToken(user) });
     } catch (error) {
         console.error('Register error:', error);
         res.status(500).json({
@@ -326,9 +416,31 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ message: 'Email and password are required' });
         }
 
-        const users = await readUsers();
+        let users = await readUsers();
+        users = await mergeUsersWithFallback(users);
+
+        // Bootstrap a default admin for fresh deployments with an empty user store.
+        if (!Array.isArray(users) || users.length === 0) {
+            try {
+                users = await ensureDefaultAdminExists([]);
+                console.log('Bootstrap: created default admin account for empty user store.');
+            } catch (bootstrapError) {
+                console.error('Bootstrap admin creation failed:', bootstrapError?.message || bootstrapError);
+            }
+        }
+
         const normalizedEmail = String(email).trim().toLowerCase();
-        const user = users.find((u) => String(u?.email || '').toLowerCase() === normalizedEmail);
+        let user = users.find((u) => String(u?.email || '').toLowerCase() === normalizedEmail);
+
+        // If deployment has data but misses the default admin, auto-create it on first admin login attempt.
+        if (!user && normalizedEmail === 'admin@alumnyx.com') {
+            try {
+                users = await ensureDefaultAdminExists(users);
+                user = users.find((u) => String(u?.email || '').toLowerCase() === normalizedEmail);
+            } catch (bootstrapError) {
+                console.error('Bootstrap admin creation failed:', bootstrapError?.message || bootstrapError);
+            }
+        }
 
         const isPasswordValid = user ? await safeComparePassword(password, user.password) : false;
         if (!user || !isPasswordValid) {
@@ -352,7 +464,7 @@ const loginUser = async (req, res) => {
         }
 
         const safe = sanitizeUser(withProfile(user, profiles));
-        res.json({ ...safe, token: generateToken(user.id) });
+        res.json({ ...safe, token: generateToken(user) });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Server error during login' });
@@ -365,13 +477,32 @@ const getMe = async (req, res) => {
         const profiles = await readJson('profiles');
         const user = users.find((u) => u.id === req.user.id);
 
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (!user) {
+            return res.status(200).json({
+                id: req.user?.id || null,
+                email: req.user?.email || null,
+                role: req.user?.role || null,
+                isVerified: Boolean(req.user?.isVerified),
+                isSuperAdmin: Boolean(req.user?.isSuperAdmin),
+                profile: null,
+                warning: 'User profile not found in storage; returning token payload',
+            });
+        }
 
         const safe = sanitizeUser(withProfile(user, profiles));
         res.json(safe);
     } catch (error) {
         console.error('GetMe error:', error);
-        res.status(500).json({ message: 'Server error' });
+        // Keep auth sessions usable even if profile/user enrichment fails.
+        res.status(200).json({
+            id: req.user?.id || null,
+            email: req.user?.email || null,
+            role: req.user?.role || null,
+            isVerified: Boolean(req.user?.isVerified),
+            isSuperAdmin: Boolean(req.user?.isSuperAdmin),
+            profile: null,
+            warning: 'Partial user response: profile enrichment unavailable',
+        });
     }
 };
 
@@ -392,4 +523,71 @@ const checkEmailExists = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, alumniRegister, loginUser, getMe, checkEmailExists };
+const bootstrapAdmin = async (req, res) => {
+    try {
+        const expectedKey = String(process.env.BOOTSTRAP_ADMIN_KEY || '').trim();
+        const providedKey = String(req.headers['x-bootstrap-key'] || req.body?.bootstrapKey || '').trim();
+
+        if (expectedKey && providedKey !== expectedKey) {
+            return res.status(403).json({ message: 'Invalid bootstrap key' });
+        }
+
+        const requestedEmail = String(req.body?.email || 'admin@alumnyx.com').trim().toLowerCase();
+        if (requestedEmail !== 'admin@alumnyx.com') {
+            return res.status(400).json({ message: 'Only the default admin account can be bootstrapped' });
+        }
+
+        const forceResetPassword = Boolean(req.body?.forceResetPassword);
+        const requestedPassword = String(req.body?.password || 'password123').trim();
+        if (!requestedPassword) {
+            return res.status(400).json({ message: 'Password cannot be empty' });
+        }
+
+        const now = nowIso();
+        const users = await readUsers();
+        const existingAdmin = users.find((u) => String(u?.email || '').toLowerCase() === 'admin@alumnyx.com');
+
+        if (existingAdmin && !forceResetPassword) {
+            return res.json({
+                message: 'Admin account already exists',
+                email: 'admin@alumnyx.com',
+                created: false,
+                passwordReset: false,
+            });
+        }
+
+        const adminUser = {
+            id: existingAdmin?.id || uuidv4(),
+            email: 'admin@alumnyx.com',
+            password: await bcrypt.hash(requestedPassword, 10),
+            role: 'ADMIN',
+            isVerified: true,
+            isSuperAdmin: true,
+            alumniStatus: null,
+            createdAt: existingAdmin?.createdAt || now,
+            updatedAt: now,
+        };
+
+        try {
+            await safePersistSingleUser(adminUser);
+        } catch (persistError) {
+            console.warn('Primary admin persist failed; using file fallback:', persistError?.message || persistError);
+            await upsertFallbackUser(adminUser);
+        }
+
+        return res.status(existingAdmin ? 200 : 201).json({
+            message: existingAdmin ? 'Admin password reset successfully' : 'Admin account bootstrapped successfully',
+            email: 'admin@alumnyx.com',
+            created: !existingAdmin,
+            passwordReset: true,
+        });
+    } catch (error) {
+        console.error('Bootstrap admin error:', error);
+        return res.status(500).json({
+            message: 'Server error during bootstrap-admin',
+            detail: String(error?.message || error).slice(0, 300),
+        });
+    }
+};
+
+module.exports = { registerUser, alumniRegister, loginUser, getMe, checkEmailExists, bootstrapAdmin };

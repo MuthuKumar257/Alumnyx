@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView, Platform, TouchableOpacity, TextInput, Image } from 'react-native';
 import { Search, Bell, ChevronRight } from 'lucide-react-native';
-import axiosClient from '../api/axiosClient';
+import { adminDelete, adminGet, adminPost, adminPut } from './api/adminHttp';
 import AdminSidebar from './AdminSidebar';
 import AdminDashboard from './AdminDashboard';
 import AdminsManagementPage from './AdminsManagementPage';
@@ -92,13 +92,13 @@ export default function AdminLayout({ initialSection, currentUser, onLogout }: P
         setLoading(true);
         try {
             const [statsRes, adminsRes, usersRes, alumniRes, pendingRes, logsRes, departmentsRes] = await Promise.all([
-                axiosClient.get('/admin/stats'),
-                axiosClient.get('/admin/admins'),
-                axiosClient.get('/admin/users'),
-                axiosClient.get('/admin/alumni'),
-                axiosClient.get('/admin/alumni/pending'),
-                axiosClient.get('/admin/logs'),
-                axiosClient.get('/admin/departments'),
+                adminGet('/admin/stats'),
+                adminGet('/admin/admins'),
+                adminGet('/admin/users'),
+                adminGet('/admin/alumni'),
+                adminGet('/admin/alumni/pending'),
+                adminGet('/admin/logs'),
+                adminGet('/admin/departments'),
             ]);
 
             setStats({
@@ -161,34 +161,34 @@ export default function AdminLayout({ initialSection, currentUser, onLogout }: P
     };
 
     const handleCreateUser = async (data: { firstName: string; lastName: string; email: string; role: string; college: string; graduationYear: string; department: string; }) => {
-        await axiosClient.post('/admin/users', data);
+        await adminPost('/admin/users', data);
         await loadAll();
     };
 
     const handleCreateAdmin = async (data: { name: string; email: string; password: string; }) => {
-        await axiosClient.post('/admin/admins', data);
+        await adminPost('/admin/admins', data);
         await loadAll();
     };
 
     const handleCreateAlumni = async (data: { name: string; email: string; password: string; college: string; graduationYear: string; department: string; }) => {
-        await axiosClient.post('/admin/alumni', data);
+        await adminPost('/admin/alumni', data);
         await loadAll();
     };
 
     const handleAddDepartment = async (name: string) => {
-        await axiosClient.post('/admin/departments', { name });
+        await adminPost('/admin/departments', { name });
         await loadAll();
     };
 
     const handleDeleteDepartment = async (name: string) => {
-        await axiosClient.delete('/admin/departments', { data: { department: name } });
+        await adminDelete('/admin/departments', { department: name }, '/admin/departments/delete');
         await loadAll();
     };
 
     const handleDeleteUser = async (id: string, name: string) => {
         const doDelete = async () => {
             try {
-                await axiosClient.delete(`/admin/users/${id}`);
+                await adminDelete(`/admin/users/${id}`, {}, `/admin/users/${id}/delete`);
                 await loadAll();
             } catch (e: any) {
                 Alert.alert('Error', e?.response?.data?.message || 'Failed to delete user.');
@@ -221,7 +221,7 @@ export default function AdminLayout({ initialSection, currentUser, onLogout }: P
 
         const doDelete = async () => {
             try {
-                await axiosClient.delete(`/admin/admins/${id}`);
+                await adminDelete(`/admin/admins/${id}`, {}, `/admin/admins/${id}/delete`);
                 await loadAll();
             } catch (e: any) {
                 Alert.alert('Error', e?.response?.data?.message || 'Failed to delete admin.');
@@ -241,29 +241,29 @@ export default function AdminLayout({ initialSection, currentUser, onLogout }: P
     };
 
     const handleApproveAlumni = async (id: string) => {
-        await axiosClient.put(`/admin/alumni/verify/${id}`);
+        await adminPut(`/admin/alumni/verify/${id}`, {}, `/admin/alumni/verify/${id}`);
         await loadAll();
     };
 
     const handleRejectAlumni = async (id: string) => {
-        await axiosClient.put(`/admin/alumni/reject/${id}`);
+        await adminPut(`/admin/alumni/reject/${id}`, {}, `/admin/alumni/reject/${id}`);
         await loadAll();
     };
 
     const handleBulkApproveAlumni = async (ids: string[]) => {
-        await axiosClient.put('/admin/alumni/bulk-verify', { ids });
+        await adminPut('/admin/alumni/bulk-verify', { ids }, '/admin/alumni/bulk-verify');
         await loadAll();
     };
 
     const handleBulkRejectAlumni = async (ids: string[]) => {
-        await axiosClient.put('/admin/alumni/bulk-reject', { ids });
+        await adminPut('/admin/alumni/bulk-reject', { ids }, '/admin/alumni/bulk-reject');
         await loadAll();
     };
 
     const handleResetPassword = async (id: string, name: string) => {
         const doReset = async () => {
             try {
-                const res = await axiosClient.put(`/admin/users/${id}/reset-password`);
+                const res = await adminPut(`/admin/users/${id}/reset-password`, {}, `/admin/users/${id}/reset-password`);
                 const msg = res.data?.message || 'Password reset successfully.';
                 if (Platform.OS === 'web') {
                     window.alert(msg);
@@ -366,7 +366,7 @@ export default function AdminLayout({ initialSection, currentUser, onLogout }: P
                     profilePicture: editForm.profilePicture.trim() || null,
                 };
 
-            await axiosClient.put(`/admin/users/${editForm.id}`, payload);
+            await adminPut(`/admin/users/${editForm.id}`, payload, `/admin/users/${editForm.id}/update`);
             await loadAll();
             closeEditPanel();
         } catch (e: any) {

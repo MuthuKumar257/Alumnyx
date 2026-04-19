@@ -4,7 +4,7 @@
   "description": "Alumnyx Alumni Networking Platform - Backend API",
   "main": "pages/api/[[...path]].js",
   "scripts": {
-    "start": "node init_db.js; node scripts/runNext.js start",
+    "start": "node scripts/startApp.js",
     "dev": "node scripts/runNext.js dev",
     "build": "node node_modules/next/dist/bin/next build",
     "init": "node node_modules/prisma/build/index.js db push --schema=prisma/schema.prisma",

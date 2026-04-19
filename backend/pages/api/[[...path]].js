@@ -20,11 +20,18 @@ const envAllowedOrigins = String(process.env.CORS_ORIGIN || '')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const allowedOrigins = [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...envAllowedOrigins])];
+const normalizeOrigin = (origin) => String(origin || '').trim().toLowerCase().replace(/\/+$/, '');
+
+const EXPLICIT_ALLOWED_ORIGINS = ['http://localhost:8081'];
+
+const allowedOrigins = [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...EXPLICIT_ALLOWED_ORIGINS, ...envAllowedOrigins])]
+  .map(normalizeOrigin);
+
+const isLocalDevOrigin = (origin) => /^(https?:\/\/)(localhost|127\.0\.0\.1)(:\d+)?$/i.test(String(origin || '').trim());
 
 function isAllowedOrigin(origin) {
   if (!origin) return true;
-  return allowedOrigins.includes(origin);
+  return allowedOrigins.includes(normalizeOrigin(origin)) || isLocalDevOrigin(origin);
 }
 
 const corsOptions = {
@@ -74,18 +81,22 @@ function createApp() {
 
 export default function handler(req, res) {
   const requestOrigin = req.headers?.origin;
-  if (isAllowedOrigin(requestOrigin)) {
-    if (requestOrigin) {
-      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
-      res.setHeader('Vary', 'Origin');
-    }
+  const requestHeaders = req.headers?.['access-control-request-headers'];
+
+  if (requestOrigin && isAllowedOrigin(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', requestHeaders || 'Content-Type, Authorization');
   }
 
   if (req.method === 'OPTIONS') {
     res.status(204).end();
     return;
+  }
+
+  if (isAllowedOrigin(requestOrigin)) {
+    // Headers are already set above when requestOrigin is present.
   }
 
   if (!app) {

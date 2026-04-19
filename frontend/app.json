@@ -26,11 +26,8 @@
       },
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ],
-      "package": "com.anonymous.alumnyx"
+      ]
     },
     "plugins": [
       [
@@ -51,6 +48,12 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiBaseUrl": "https://apialumnyx.development.catalystappsail.in",
+      "eas": {
+        "projectId": "4cb38e54-b5d6-4503-8298-4e17beafcf70"
+      }
     }
   }
 }

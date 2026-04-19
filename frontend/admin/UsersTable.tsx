@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
-import axiosClient from '../api/axiosClient';
+import { adminPost } from './api/adminHttp';
 import { Search, Filter, Download, PlusCircle, Upload, Trash2, Pencil, RotateCcw, Users, Building2, ChevronLeft, ChevronRight, Check, X } from 'lucide-react-native';
 
 interface NewUserData {
@@ -87,9 +87,7 @@ export default function UsersTable({ users, departments, onDelete, onAdd, onRese
                     try {
                         const fd = new FormData();
                         fd.append('file', file);
-                        const res = await axiosClient.post('/admin/users/bulk', fd, {
-                            headers: { 'Content-Type': 'multipart/form-data' },
-                        });
+                        const res = await adminPost('/admin/users/bulk', fd);
                         setImportResult(res.data);
                         if ((res.data.created || 0) > 0 && (window as any).__adminReload) (window as any).__adminReload();
                     } catch (e: any) {
